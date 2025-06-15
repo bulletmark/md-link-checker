@@ -13,6 +13,9 @@ classifiers = [
   "Programming Language :: Python :: 3",
 ]
 dynamic = ["version"]
+dependencies = [
+  "requests",
+]
 
 [[project.authors]]
 name = "Mark Blakeney"
