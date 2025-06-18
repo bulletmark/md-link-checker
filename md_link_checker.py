@@ -50,7 +50,7 @@ def make_link(section: str) -> str:
 
 
 async def check_url(queue: asyncio.Queue) -> bool:
-    "Check if a URL is valid and reachable"
+    "Async task to read URLs from queue and check each is valid and reachable"
     all_ok = True
     while True:
         try:
@@ -76,21 +76,25 @@ async def check_url(queue: asyncio.Queue) -> bool:
 async def check_urls(
     file: Path, links: list[str], done: set[str], args: Namespace
 ) -> bool:
-    session = ClientSession()
-    queue: asyncio.Queue = asyncio.Queue()
-    for link in links:
-        if any(link.startswith(s) for s in ('http:', 'https:')) and link not in done:
-            done.add(link)
-            if args.no_urls:
-                if args.verbose:
-                    print(f'{file}: Skipping URL link "{link}" ..')
-            else:
-                queue.put_nowait((file, link, session, args.verbose))
+    "Check all URLs in the given file"
+    async with ClientSession() as session:
+        queue: asyncio.Queue = asyncio.Queue()
+        for link in links:
+            if (
+                any(link.startswith(s) for s in ('http:', 'https:'))
+                and link not in done
+            ):
+                done.add(link)
+                if args.no_urls:
+                    if args.verbose:
+                        print(f'{file}: Skipping URL link "{link}" ..')
+                else:
+                    queue.put_nowait((file, link, session, args.verbose))
 
-    n_tasks = min(queue.qsize(), args.parallel_url_checks)
-    tasks = [asyncio.create_task(check_url(queue)) for _ in range(n_tasks)]
-    all_ok = all(await asyncio.gather(*tasks))
-    await session.close()
+        n_tasks = min(queue.qsize(), args.parallel_url_checks)
+        tasks = [asyncio.create_task(check_url(queue)) for _ in range(n_tasks)]
+        all_ok = all(await asyncio.gather(*tasks))
+
     return all_ok
 
 
@@ -100,7 +104,7 @@ def ulist(lst: Generator[str]) -> list[str]:
 
 
 def check_file(file: Path, args: Namespace) -> bool:
-    "Check links in this file"
+    "Check links in given file"
     text = file.read_text()
 
     # Fetch all unique inline links ..

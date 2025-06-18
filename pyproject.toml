@@ -7,7 +7,7 @@ name = "md-link-checker"
 description = "Utility to check url, section reference, and path links in Markdown files"
 readme = "README.md"
 license = "GPL-3.0-or-later"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 keywords = ["markdown", "github", "gfm"]
 classifiers = [
   "Programming Language :: Python :: 3",
