@@ -14,7 +14,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "requests",
+  "aiohttp",
 ]
 
 [[project.authors]]
