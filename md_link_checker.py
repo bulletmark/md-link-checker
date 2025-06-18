@@ -12,7 +12,6 @@ import string
 import sys
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Generator
 
 from aiohttp import ClientSession
 
@@ -73,49 +72,16 @@ async def check_url(queue: asyncio.Queue) -> bool:
         queue.task_done()
 
 
-async def check_urls(
-    file: Path, links: list[str], done: set[str], args: Namespace
-) -> bool:
-    "Check all URLs in the given file"
-    async with ClientSession() as session:
-        queue: asyncio.Queue = asyncio.Queue()
-        for link in links:
-            if (
-                any(link.startswith(s) for s in ('http:', 'https:'))
-                and link not in done
-            ):
-                done.add(link)
-                if args.no_urls:
-                    if args.verbose:
-                        print(f'{file}: Skipping URL link "{link}" ..')
-                else:
-                    queue.put_nowait((file, link, session, args.verbose))
-
-        n_tasks = min(queue.qsize(), args.parallel_url_checks)
-        tasks = [asyncio.create_task(check_url(queue)) for _ in range(n_tasks)]
-        all_ok = all(await asyncio.gather(*tasks))
-
-    return all_ok
-
-
-def ulist(lst: Generator[str]) -> list[str]:
-    "Return a unique list from a generator"
-    return list(dict.fromkeys(lst))
-
-
-def check_file(file: Path, args: Namespace) -> bool:
+async def check_file(file: Path, args: Namespace, session: ClientSession) -> bool:
     "Check links in given file"
     text = file.read_text()
 
     # Fetch all unique inline links ..
-    links = ulist(find_link(lk) for lk in re.findall(r']\((.+)\)', text))
+    links = [find_link(lk) for lk in re.findall(r']\((.+)\)', text)]
 
     # Add all unique reference links ..
     links.extend(
-        ulist(
-            lk.strip()
-            for lk in re.findall(r'^\s*\[.+\]\s*:\s*(.+)', text, re.MULTILINE)
-        )
+        [lk.strip() for lk in re.findall(r'^\s*\[.+\]\s*:\s*(.+)', text, re.MULTILINE)]
     )
 
     # Fetch sections and create unique links from them ..
@@ -123,10 +89,26 @@ def check_file(file: Path, args: Namespace) -> bool:
         s for p in re.findall(r'^#+\s+(.+)', text, re.MULTILINE) if (s := make_link(p))
     )
 
-    done: set[str] = set()
-    ok = asyncio.run(check_urls(file, links, done, args))
+    all_ok = True
+    done = set()
 
-    # Check section links ..
+    # Check URL links for this file ..
+    queue: asyncio.Queue = asyncio.Queue()
+    for link in links:
+        if any(link.startswith(s) for s in ('http:', 'https:')) and link not in done:
+            done.add(link)
+            if args.no_urls:
+                if args.verbose:
+                    print(f'{file}: Skipping URL link "{link}" ..')
+            else:
+                queue.put_nowait((file, link, session, args.verbose))
+
+    n_tasks = min(queue.qsize(), args.parallel_url_checks)
+    tasks = [asyncio.create_task(check_url(queue)) for _ in range(n_tasks)]
+    if not all(await asyncio.gather(*tasks)):
+        all_ok = False
+
+    # Check section links for this file ..
     for link in links:
         if link[0] == '#' and link not in done:
             done.add(link)
@@ -134,26 +116,40 @@ def check_file(file: Path, args: Namespace) -> bool:
                 print(f'{file}: Checking section link "{link}" ..')
 
             if link[1:] not in sections:
-                ok = False
+                all_ok = False
                 print(
                     f'{file}: Link "{link}": does not match any section.',
                     file=sys.stderr,
                 )
 
-    base = file.parent
-
-    # Check path links ..
+    # Check path links for this file ..
+    basedir = file.parent
     for link in links:
         if link not in done:
             done.add(link)
             if args.verbose:
                 print(f'{file}: Checking path link "{link}" ..')
 
-            if not (base / link).exists():
-                ok = False
+            if not (basedir / link).exists():
+                all_ok = False
                 print(f'{file}: Path "{link}": does not exist.', file=sys.stderr)
 
-    return ok
+    return all_ok
+
+
+async def main_async(args: Namespace) -> str | None:
+    "Main async code"
+    error = False
+    async with ClientSession() as session:
+        for file in args.files or [DEFFILE]:
+            path = Path(file)
+            if not path.exists():
+                return f'File "{file}" does not exist.'
+
+            if not await check_file(path, args, session):
+                error = True
+
+    return 'Errors found in file[s].' if error and not args.no_fail else None
 
 
 def main() -> str | None:
@@ -191,19 +187,7 @@ def main() -> str | None:
         help=f'one or more markdown files to check, default = "{DEFFILE}"',
     )
 
-    args = opt.parse_args()
-
-    # Check each file on the command line
-    error = False
-    for file in args.files or [DEFFILE]:
-        path = Path(file)
-        if not path.exists():
-            return f'File "{file}" does not exist.'
-
-        if not check_file(Path(file), args):
-            error = True
-
-    return 'Errors found in file[s].' if error and not args.no_fail else None
+    return asyncio.run(main_async(opt.parse_args()))
 
 
 if __name__ == '__main__':
