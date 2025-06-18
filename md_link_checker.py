@@ -87,12 +87,11 @@ async def check_urls(
             else:
                 queue.put_nowait((file, link, session, args.verbose))
 
-    tasks = [
-        asyncio.create_task(check_url(queue)) for _ in range(args.parallel_url_checks)
-    ]
-    result = all(await asyncio.gather(*tasks))
+    n_tasks = min(queue.qsize(), args.parallel_url_checks)
+    tasks = [asyncio.create_task(check_url(queue)) for _ in range(n_tasks)]
+    all_ok = all(await asyncio.gather(*tasks))
     await session.close()
-    return result
+    return all_ok
 
 
 def ulist(lst: Generator[str]) -> list[str]:
