@@ -143,8 +143,8 @@ async def main_async(args: Namespace) -> str | None:
     async with ClientSession() as session:
         for file in args.files or [DEFFILE]:
             path = Path(file)
-            if not path.exists():
-                return f'File "{file}" does not exist.'
+            if not path.is_file():
+                return f'File "{path}" does not exist.'
 
             if not await check_file(path, args, session):
                 error = True
