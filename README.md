@@ -4,12 +4,11 @@
 This is a simple command line utility to check url, section reference, and path
 links in Markdown files. It iterates through the specified Markdown files and
 checks each link in the file for validity. If no file is specified then it
-defaults to checking `README.md` in the current directory. URL fetches can be
-slow over the internet so they are checked simultaneously (maximum 10 in
-parallel per file by default but you can change that using the
-`-p/--parallel-url-checks` option). There are a number of similar utilities
-available so why did I create another one? Well, all those that I tried didn't
-work!
+defaults to checking `README.md` in the current directory. URL network fetches
+can be slow so they are checked simultaneously, doing a maximum 10 in parallel
+by default but you can change that using the `-p/--parallel-url-checks` option.
+There are a number of similar utilities available so why did I create another
+one? Well, all those that I tried didn't work!
 
 E.g. check links in the `README.md` file in the current directory:
 
