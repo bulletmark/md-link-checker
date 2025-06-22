@@ -128,15 +128,15 @@ def get_file_links(file: Path) -> list[str]:
     "Extract all links from given file"
     text = file.read_text()
 
-    # Fetch all unique inline links ..
+    # Fetch all inline links ..
     links = [find_link(lk) for lk in re.findall(r']\((.+)\)', text)]
 
-    # Add all unique reference links ..
+    # Add all reference links ..
     links.extend(
         [lk.strip() for lk in re.findall(r'^\s*\[.+\]\s*:\s*(.+)', text, re.MULTILINE)]
     )
 
-    # Return unique links
+    # Return all unique links
     return list(dict.fromkeys(links))
 
 
