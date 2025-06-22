@@ -3,9 +3,7 @@
 Utility to check url, section reference, and path links in Markdown files.
 """
 
-# Author: Mark Blakeney, May 2019.
-from __future__ import annotations
-
+# Author: Mark Blakeney, Jun 2025
 import asyncio
 import re
 import string
@@ -16,98 +14,8 @@ from pathlib import Path
 from aiohttp import ClientSession, ClientTimeout
 
 DEFFILE = 'README.md'
-
 DELS = set(string.punctuation) - {'_', '-'}
 TRANSLATION = str.maketrans('', '', ''.join(DELS))
-
-timeout = ClientTimeout(total=10)
-queue: asyncio.Queue = asyncio.Queue()
-
-
-def section_to_link(section: str) -> str:
-    "Normalise a section name to a GitHub link"
-    # This is based on
-    # https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#section-links
-    # with some discovered modifications.
-    text = section.strip().lower()
-    text = re.sub(r'\s+', '-', text)
-    text = re.sub(r'-+', '-', text)
-    text = text.translate(TRANSLATION)
-
-    return text
-
-
-def check_file(
-    file: Path, links: list[str], urls: dict[str, str], args: Namespace
-) -> bool:
-    "Check all links in given file"
-    # Fetch sections and create unique links from them ..
-    sections = set(
-        s
-        for p in re.findall(r'^#+\s+(.+)', file.read_text(), re.MULTILINE)
-        if (s := section_to_link(p))
-    )
-
-    # Check links for this file ..
-    all_ok = True
-    basedir = file.parent
-    for link in links:
-        if (urlres := urls.get(link)) is not None:
-            if args.verbose:
-                verb = 'Skipping' if args.no_urls else 'Checking'
-                print(f'{file}: {verb} URL "{link}" ..')
-
-            if urlres:
-                all_ok = False
-                print(f'{file}: URL "{link}": {urlres}', file=sys.stderr)
-        elif link[0] == '#':
-            if args.verbose:
-                print(f'{file}: Checking section link "{link}" ..')
-
-            if link[1:] not in sections:
-                all_ok = False
-                print(
-                    f'{file}: Link "{link}": does not match any section.',
-                    file=sys.stderr,
-                )
-        else:
-            if args.verbose:
-                print(f'{file}: Checking path link "{link}" ..')
-
-            if not (basedir / link).exists():
-                all_ok = False
-                print(f'{file}: Path "{link}": does not exist.', file=sys.stderr)
-
-    return all_ok
-
-
-async def check_url(urls: dict[str, str], session: ClientSession) -> None:
-    "Async task to read URLs from queue and check each is valid and reachable"
-    while True:
-        try:
-            url = queue.get_nowait()
-        except asyncio.QueueEmpty:
-            break
-
-        try:
-            async with session.get(url, timeout=timeout) as response:
-                # Ignore forbidden links as browsers can sometimes access them
-                if response.status != 403:
-                    response.raise_for_status()
-        except Exception as e:
-            urls[url] = str(e)
-
-        queue.task_done()
-
-
-async def check_all_urls(urls: dict[str, str], max_parallel: int) -> None:
-    async with ClientSession() as session:
-        for url in urls:
-            queue.put_nowait(url)
-
-        n_tasks = min(len(urls), max_parallel)
-        tasks = [asyncio.create_task(check_url(urls, session)) for _ in range(n_tasks)]
-        await asyncio.gather(*tasks)
 
 
 def find_link(link: str) -> str:
@@ -124,56 +32,156 @@ def find_link(link: str) -> str:
     return link
 
 
-def get_file_links(file: Path) -> list[str]:
-    "Extract all links from given file"
-    text = file.read_text()
+def section_to_link(section: str) -> str:
+    "Normalise a section name to a GitHub link"
+    # This is based on
+    # https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#section-links
+    # with some discovered modifications.
+    text = section.strip().lower()
+    text = re.sub(r'\s+', '-', text)
+    text = re.sub(r'-+', '-', text)
+    text = text.translate(TRANSLATION)
 
-    # Fetch all inline links ..
-    links = [find_link(lk) for lk in re.findall(r']\((.+)\)', text)]
-
-    # Add all reference links ..
-    links.extend(
-        [lk.strip() for lk in re.findall(r'^\s*\[.+\]\s*:\s*(.+)', text, re.MULTILINE)]
-    )
-
-    # Return all unique links
-    return list(dict.fromkeys(links))
+    return text
 
 
-async def main_async(args: Namespace) -> str | None:
-    "Main async code"
-    # Extract all links from all files
-    links = {}
-    for filestr in args.files or [DEFFILE]:
-        # Only process each file once
-        if (file := Path(filestr)) in links:
-            continue
+class File:
+    "Class to represent each Markdown file"
 
-        if not file.is_file():
-            return f'File "{file}" does not exist.'
+    files: set[Path] = set()
+    urls: dict[str, str] = {}
+    queue: asyncio.Queue = asyncio.Queue()
+    timeout = ClientTimeout(total=10)
 
-        # Extract links from this file
-        if filelinks := get_file_links(file):
-            links[file] = filelinks
+    def __init__(self, file: Path) -> None:
+        "Constructor to read file and extract links"
+        self.file = file
 
-    # Get unique links across all files
-    urls = {
-        link: ''
-        for file in links
-        for link in links[file]
-        if any(link.startswith(s) for s in ('http:', 'https:'))
-    }
+        # Extract all links, and valid section links, for this file
+        text = file.read_text()
 
-    # Validate all URLs
-    if urls and not args.no_urls:
-        await check_all_urls(urls, args.parallel_url_checks)
+        # Fetch all inline links ..
+        links = [find_link(lk) for lk in re.findall(r']\((.+)\)', text)]
 
-    had_error = False
-    for file in links:
-        if not check_file(file, links[file], urls, args):
-            had_error = True
+        # Add all reference links ..
+        links.extend(
+            lk.strip()
+            for lk in re.findall(r'^\s*\[.+\]\s*:\s*(.+)', text, re.MULTILINE)
+        )
 
-    return 'Errors found in file[s].' if had_error and not args.no_fail else None
+        # Fetch sections and create unique links from them ..
+        sections = set(
+            s
+            for p in re.findall(r'^#+\s+(.+)', text, re.MULTILINE)
+            if (s := section_to_link(p))
+        )
+
+        # Remove duplicates from links, preserving order
+        self.links = list(dict.fromkeys(links))
+
+        # Record set of valid section links
+        self.sections = set(
+            s for s in self.links if s.startswith('#') and s[1:] in sections
+        )
+
+        # Record file processed
+        self.files.add(file)
+
+        # Save unique url links across all files
+        self.urls.update(
+            {u: '' for u in self.links if u.startswith(('http:', 'https:'))}
+        )
+
+    def check(self, args: Namespace) -> bool:
+        "Check and report all links in this file"
+        all_ok = True
+        basedir = self.file.parent
+        for link in self.links:
+            if (urlres := self.urls.get(link)) is not None:
+                if args.verbose:
+                    verb = 'Skipping' if args.no_urls else 'Checking'
+                    print(f'{self.file}: {verb} URL "{link}" ..')
+
+                if urlres:
+                    all_ok = False
+                    print(f'{self.file}: URL "{link}": {urlres}', file=sys.stderr)
+            elif link[0] == '#':
+                if args.verbose:
+                    print(f'{self.file}: Checking section link "{link}" ..')
+
+                if link not in self.sections:
+                    all_ok = False
+                    print(
+                        f'{self.file}: Link "{link}": does not match any section.',
+                        file=sys.stderr,
+                    )
+            else:
+                if args.verbose:
+                    print(f'{self.file}: Checking path link "{link}" ..')
+
+                if not (basedir / link).exists():
+                    all_ok = False
+                    print(
+                        f'{self.file}: Path "{link}": does not exist.', file=sys.stderr
+                    )
+
+        return all_ok
+
+    @classmethod
+    async def check_url(cls, session: ClientSession) -> None:
+        "Async task to loop reading URL from the queue and check it is valid and reachable"
+        while True:
+            try:
+                url = cls.queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+            try:
+                async with session.get(url, timeout=cls.timeout) as response:
+                    # Ignore forbidden links as browsers can sometimes access them
+                    if response.status != 403:
+                        response.raise_for_status()
+            except Exception as e:
+                cls.urls[url] = str(e)
+
+            cls.queue.task_done()
+
+    @classmethod
+    async def check_all_urls(cls, args: Namespace) -> None:
+        "Create a pool of async tasks to check URLs in parallel"
+        async with ClientSession() as session:
+            for url in cls.urls:
+                cls.queue.put_nowait(url)
+
+            n_pool_tasks = min(cls.queue.qsize(), args.parallel_url_checks)
+
+            async with asyncio.TaskGroup() as tg:
+                for _ in range(n_pool_tasks):
+                    tg.create_task(cls.check_url(session))
+
+    @classmethod
+    async def main(cls, args: Namespace) -> str | None:
+        "Main async code"
+        # Extract all links from all files
+        files = []
+        for filestr in args.files or [DEFFILE]:
+            # Only process each file once
+            if (file := Path(filestr)) not in cls.files:
+                if not file.is_file():
+                    return f'File "{file}" does not exist.'
+
+                files.append(cls(file))
+
+        # Validate all URLs (using parallel pool of async tasks)
+        if cls.urls and not args.no_urls:
+            await cls.check_all_urls(args)
+
+        all_ok = True
+        for filep in files:
+            if not filep.check(args):
+                all_ok = False
+
+        return None if all_ok or args.no_fail else 'Errors found in file[s].'
 
 
 def main() -> str | None:
@@ -211,7 +219,7 @@ def main() -> str | None:
         help=f'one or more markdown files to check, default = "{DEFFILE}"',
     )
 
-    return asyncio.run(main_async(opt.parse_args()))
+    return asyncio.run(File.main(opt.parse_args()))
 
 
 if __name__ == '__main__':
