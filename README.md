@@ -30,10 +30,18 @@ https://github.com/bulletmark/md-link-checker.
 
 ## Installation or Upgrade
 
-Python 3.8 or later is required. [`md-link-checker` is on
-PyPI](https://pypi.org/project/md-link-checker/) so the easiest way to install
-it is to use [`uv
-tool`](https://docs.astral.sh/uv/guides/tools/#installing-tools):
+Python 3.8 or later is required. You can run
+[`md-link-checker`][md-link-checker] most easily using [`uvx`][uvx]. Just make
+sure [`uv`][uv] is installed and then run the following command which will
+install `md-link-checker` from [PyPi][md-link-checker-py] "on the fly" and will
+then run it immediately:
+
+```sh
+$ uvx md-link-checker [myfile.md]
+```
+
+Or install [`md-link-checker`][md-link-checker] formally on your system using
+using [`uv tool`][uvtool] (or [`pipx`][pipx] or [`pipxu`][pipxu]). To install:
 
 ```sh
 $ uv tool install md-link-checker
@@ -87,5 +95,13 @@ distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License at
 <http://www.gnu.org/licenses/> for more details.
+
+[md-link-checker]: https://github.com/bulletmark/md-link-checker
+[md-link-checker-py]: https://pypi.org/project/md-link-checker
+[uv]: https://docs.astral.sh/uv/
+[uvtool]: https://docs.astral.sh/uv/guides/tools/#using-tools
+[uvx]: https://docs.astral.sh/uv/guides/tools/#using-tools
+[pipx]: https://github.com/pypa/pipx
+[pipxu]: https://github.com/bulletmark/pipxu
 
 <!-- vim: se ai syn=markdown: -->
