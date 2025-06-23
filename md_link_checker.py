@@ -134,7 +134,7 @@ class File:
 
             try:
                 async with session.get(url, timeout=cls.timeout) as response:
-                    # Ignore forbidden links as browsers can sometimes access them
+                    # Ignore forbidden links as browsers can sometimes still access them
                     if response.status != 403:
                         response.raise_for_status()
             except Exception as e:
@@ -172,12 +172,16 @@ class File:
         if cls.urls and not args.no_urls:
             await cls.check_all_urls(args)
 
-        all_ok = True
+        bad = 0
         for filep in files.values():
             if not filep.check(args):
-                all_ok = False
+                bad += 1
 
-        return None if all_ok or args.no_fail else 'Errors found in file[s].'
+        if bad > 0 and not args.no_fail:
+            s = 's' if bad > 1 else ''
+            return f'Errors found in {bad} file{s}.'
+
+        return None
 
 
 def main() -> str | None:
