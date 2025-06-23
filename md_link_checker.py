@@ -4,6 +4,8 @@ Utility to check url, section reference, and path links in Markdown files.
 """
 
 # Author: Mark Blakeney, Jun 2025
+from __future__ import annotations
+
 import asyncio
 import re
 import string
@@ -150,10 +152,10 @@ class File:
                 cls.queue.put_nowait(url)
 
             n_pool_tasks = min(cls.queue.qsize(), args.parallel_url_checks)
-
-            async with asyncio.TaskGroup() as tg:
-                for _ in range(n_pool_tasks):
-                    tg.create_task(cls.check_url(session))
+            tasks = [
+                asyncio.create_task(cls.check_url(session)) for _ in range(n_pool_tasks)
+            ]
+            await asyncio.gather(*tasks)
 
     @classmethod
     async def main(cls, args: Namespace) -> str | None:

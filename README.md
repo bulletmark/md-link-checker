@@ -27,10 +27,9 @@ $ md-link-checker */README.md
 The latest version and documentation is available at
 https://github.com/bulletmark/md-link-checker.
 
-
 ## Installation or Upgrade
 
-Python 3.11 or later is required. You can run
+Python 3.9 or later is required. You can run
 [`md-link-checker`][md-link-checker] most easily using [`uvx`][uvx]. Just make
 sure [`uv`][uv] is installed and then run the following command which will
 install `md-link-checker` from [PyPi][md-link-checker-py] "on the fly" and will
