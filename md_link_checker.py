@@ -48,7 +48,6 @@ def section_to_link(section: str) -> str:
 class File:
     "Class to represent each Markdown file"
 
-    files: set[Path] = set()
     urls: dict[str, str] = {}
     queue: asyncio.Queue = asyncio.Queue()
     timeout = ClientTimeout(total=10)
@@ -83,9 +82,6 @@ class File:
         self.sections = set(
             s for s in self.links if s.startswith('#') and s[1:] in sections
         )
-
-        # Record file processed
-        self.files.add(file)
 
         # Save unique url links across all files
         self.urls.update(
@@ -163,21 +159,21 @@ class File:
     async def main(cls, args: Namespace) -> str | None:
         "Main async code"
         # Extract all links from all files
-        files = []
+        files = {}
         for filestr in args.files or [DEFFILE]:
             # Only process each file once
-            if (file := Path(filestr)) not in cls.files:
+            if (file := Path(filestr)) not in files:
                 if not file.is_file():
                     return f'File "{file}" does not exist.'
 
-                files.append(cls(file))
+                files[file] = cls(file)
 
         # Validate all URLs (using parallel pool of async tasks)
         if cls.urls and not args.no_urls:
             await cls.check_all_urls(args)
 
         all_ok = True
-        for filep in files:
+        for filep in files.values():
             if not filep.check(args):
                 all_ok = False
 
