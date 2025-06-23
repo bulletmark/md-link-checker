@@ -90,7 +90,7 @@ class File:
             {u: '' for u in self.links if u.startswith(('http:', 'https:'))}
         )
 
-    def check(self, args: Namespace) -> bool:
+    def check_ok(self, args: Namespace) -> bool:
         "Check and report all links in this file"
         all_ok = True
         basedir = self.file.parent
@@ -174,10 +174,8 @@ class File:
         if cls.urls and not args.no_urls:
             await cls.check_all_urls(args)
 
-        bad = 0
-        for filep in files.values():
-            if not filep.check(args):
-                bad += 1
+        # Now check all urls/links in all files
+        bad = sum(not fp.check_ok(args) for fp in files.values())
 
         if bad > 0 and not args.no_fail:
             s = 's' if bad > 1 else ''
