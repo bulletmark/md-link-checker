@@ -174,7 +174,7 @@ class File:
         if cls.urls and not args.no_urls:
             await cls.check_all_urls(args)
 
-        # Now check all urls/links in all files
+        # Now check and report all urls/links in all files
         bad = sum(not fp.check_ok(args) for fp in files.values())
 
         if bad > 0 and not args.no_fail:
@@ -199,7 +199,7 @@ def main() -> str | None:
         '--parallel-url-checks',
         type=int,
         default=10,
-        help='max number of parallel URL checks to perform per file (default=%(default)d)',
+        help='max number of URL checks to perform in parallel (default=%(default)d)',
     )
     opt.add_argument(
         '-f',

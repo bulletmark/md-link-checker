@@ -77,7 +77,7 @@ options:
   -u, --no-urls         do not check URL links, only check section and path
                         links
   -p, --parallel-url-checks PARALLEL_URL_CHECKS
-                        max number of parallel URL checks to perform per file
+                        max number of URL checks to perform in parallel
                         (default=10)
   -f, --no-fail         do not return final error code after failures
   -v, --verbose         print links found in file as they are checked
