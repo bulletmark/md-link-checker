@@ -13,7 +13,7 @@ import sys
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientSession, ClientTimeout, ClientResponseError
 
 DEFFILE = 'README.md'
 DELS = set(string.punctuation) - {'_', '-'}
@@ -139,6 +139,10 @@ class File:
                     # Ignore forbidden links as browsers can sometimes still access them
                     if response.status != 403:
                         response.raise_for_status()
+            # Ignore "too many requests" errors
+            except ClientResponseError as e:
+                if e.status != 429:
+                    cls.urls[url] = str(e)
             except Exception as e:
                 cls.urls[url] = str(e)
 
