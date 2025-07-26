@@ -13,7 +13,7 @@ import sys
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
-from aiohttp import ClientSession, ClientTimeout, ClientResponseError
+from aiohttp import ClientResponseError, ClientSession, ClientTimeout
 
 DEFFILE = 'README.md'
 DELS = set(string.punctuation) - {'_', '-'}
@@ -51,6 +51,7 @@ class File:
     "Class to represent each Markdown file"
 
     urls: dict[str, str] = {}
+    urls_ignore: dict[str, str] = {}
     queue: asyncio.Queue = asyncio.Queue()
     timeout = ClientTimeout(total=10)
 
@@ -103,6 +104,10 @@ class File:
                 if urlres:
                     all_ok = False
                     print(f'{self.file}: URL "{link}": {urlres}', file=sys.stderr)
+                elif urlres := self.urls_ignore.get(link):
+                    print(
+                        f'{self.file}: ignoring URL "{link}": {urlres}', file=sys.stderr
+                    )
             elif link[0] == '#':
                 if args.verbose:
                     print(f'{self.file}: Checking section link "{link}" ..')
@@ -137,11 +142,15 @@ class File:
             try:
                 async with session.get(url, timeout=cls.timeout) as response:
                     # Ignore forbidden links as browsers can sometimes still access them
-                    if response.status != 403:
+                    if response.status == 403:
+                        cls.urls_ignore[url] = 'Forbidden'
+                    else:
                         response.raise_for_status()
-            # Ignore "too many requests" errors
             except ClientResponseError as e:
-                if e.status != 429:
+                # Ignore "too many requests" errors
+                if e.status == 429:
+                    cls.urls_ignore[url] = 'Too many requests'
+                else:
                     cls.urls[url] = str(e)
             except Exception as e:
                 cls.urls[url] = str(e)
