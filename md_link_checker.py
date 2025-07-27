@@ -104,7 +104,7 @@ class File:
                 if urlres:
                     all_ok = False
                     print(f'{self.file}: URL "{link}": {urlres}', file=sys.stderr)
-                elif urlres := self.urls_ignore.get(link):
+                elif (urlres := self.urls_ignore.get(link)) and not args.no_warnings:
                     print(
                         f'{self.file}: ignoring URL "{link}": {urlres}', file=sys.stderr
                     )
@@ -215,16 +215,22 @@ def main() -> str | None:
         help='max number of URL checks to perform in parallel (default=%(default)d)',
     )
     opt.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        help='print links found in file as they are checked',
+    )
+    opt.add_argument(
         '-f',
         '--no-fail',
         action='store_true',
         help='do not return final error code after failures',
     )
     opt.add_argument(
-        '-v',
-        '--verbose',
+        '-w',
+        '--no-warnings',
         action='store_true',
-        help='print links found in file as they are checked',
+        help='do not print warnings for ignored URLs',
     )
     opt.add_argument(
         'files',
