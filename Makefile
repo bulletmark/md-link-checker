@@ -22,4 +22,4 @@ format::
 	ruff check --select I --fix $(PYFILES) && ruff format $(PYFILES)
 
 clean::
-	@rm -vrf *.egg-info .venv/ build/ dist/ __pycache__/
+	@rm -rf *.egg-info .venv/ build/ dist/ __pycache__/

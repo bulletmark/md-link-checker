@@ -6,9 +6,11 @@ links in Markdown files. It iterates through the specified Markdown files and
 checks each link in the file for validity. If no file is specified then it
 defaults to checking `README.md` in the current directory. URL network fetches
 can be slow so they are checked simultaneously, doing a maximum 10 in parallel
-by default but you can change that using the `-p/--parallel-url-checks` option.
-There are a number of similar utilities available so why did I create another
-one? Well, all those that I tried didn't work!
+(by default but you can change that using the `-p/--parallel-url-checks`
+option). If you specify multiple files then all URLs across all files are
+extracted at the start so only unique URLs are checked and network fetches are
+minimised. There are a number of similar utilities available so why did I
+create another one? Well, all those that I tried didn't work!
 
 E.g. check links in the `README.md` file in the current directory:
 
@@ -63,7 +65,7 @@ $ uv tool uninstall md-link-checker
 Type `md-link-checker -h` to view the usage summary:
 
 ```
-usage: md-link-checker [-h] [-u] [-p PARALLEL_URL_CHECKS] [-f] [-v]
+usage: md-link-checker [-h] [-u] [-p PARALLEL_URL_CHECKS] [-v] [-f] [-w]
                           [files ...]
 
 Utility to check url, section reference, and path links in Markdown files.
@@ -79,21 +81,22 @@ options:
   -p, --parallel-url-checks PARALLEL_URL_CHECKS
                         max number of URL checks to perform in parallel
                         (default=10)
-  -f, --no-fail         do not return final error code after failures
   -v, --verbose         print links found in file as they are checked
+  -f, --no-fail         do not return final error code after failures
+  -w, --no-warnings     do not print warnings for ignored URLs
 ```
 
 ## License
 
-Copyright (C) 2025 Mark Blakeney. This program is distributed under the
-terms of the GNU General Public License. This program is free software:
-you can redistribute it and/or modify it under the terms of the GNU
-General Public License as published by the Free Software Foundation,
-either version 3 of the License, or any later version. This program is
-distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License at
-<http://www.gnu.org/licenses/> for more details.
+Copyright (C) 2025 Mark Blakeney. This program is distributed under the terms
+of the GNU General Public License. This program is free software: you can
+redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of the
+License, or any later version. This program is distributed in the hope that it
+will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
+License at <https://en.wikipedia.org/wiki/GNU_General_Public_License> for more
+details.
 
 [md-link-checker]: https://github.com/bulletmark/md-link-checker
 [md-link-checker-py]: https://pypi.org/project/md-link-checker

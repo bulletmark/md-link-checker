@@ -21,7 +21,7 @@ TRANSLATION = str.maketrans('', '', ''.join(DELS))
 
 
 def find_link(link: str) -> str:
-    "Return a link from a markdown link text, ensure matching on final bracket"
+    "Return a link from a markdown link text, finish on matching close bracket"
     stack = 1
     for n, c in enumerate(link):
         if c == '(':
@@ -29,9 +29,11 @@ def find_link(link: str) -> str:
         elif c == ')':
             stack -= 1
             if stack <= 0:
-                return link[:n]
+                link = link[:n].strip()
+                break
 
-    return link
+    # Remove any trailing title text
+    return re.sub(r'\s+".+"$', '', link).strip()
 
 
 def section_to_link(section: str) -> str:
@@ -58,37 +60,42 @@ class File:
     def __init__(self, file: Path) -> None:
         "Constructor to read file and extract links"
         self.file = file
-
-        # Extract all links, and valid section links, for this file
         text = file.read_text()
 
-        # Fetch all inline links ..
-        links = [find_link(lk) for lk in re.findall(r']\((.+)\)', text)]
+        # Fetch all inline links with titles ..
+        self.links = [find_link(lk) for lk in re.findall(r']\(([^\[\]]+)\)', text)]
 
-        # Add all reference links ..
-        links.extend(
-            lk.strip()
-            for lk in re.findall(r'^\s*\[.+\]\s*:\s*(.+)', text, re.MULTILINE)
-        )
+        # Fetch all explicit links in angle brackets ..
+        self.links.extend(re.findall(r'<(https*://[^>]+)>', text))
 
-        # Fetch sections and create unique links from them ..
-        sections = set(
-            s
-            for p in re.findall(r'^#+\s+(.+)', text, re.MULTILINE)
-            if (s := section_to_link(p))
-        )
+        # Build dict for any reference table
+        ref_tags = {
+            tag.strip().lower(): ref.strip()
+            for tag, ref in re.findall(r'^\s*\[([^\]]+)\]\s*:\s*(.+)\s*', text, re.MULTILINE)
+        }
+
+        ## Add reference links to the links list and record the tags
+        self.links.extend(ref_tags.values())
+        self.ref_tags = set(ref_tags)
 
         # Remove duplicates from links, preserving order
-        self.links = list(dict.fromkeys(links))
+        self.links = list(dict.fromkeys(self.links))
 
-        # Record set of valid section links
-        self.sections = set(
-            s for s in self.links if s.startswith('#') and s[1:] in sections
+        # Save reference links, removing duplicates
+        self.refs = list(
+            dict.fromkeys(re.findall(r'\[[^\]]+\]\[([^\]]+)\]', text, re.MULTILINE))
         )
 
         # Save unique url links across all files
         self.urls.update(
             {u: '' for u in self.links if u.startswith(('http:', 'https:'))}
+        )
+
+        # Fetch sections and create unique links from them ..
+        self.sections = set(
+            s
+            for p in re.findall(r'^#+\s+(.+)\s*', text, re.MULTILINE)
+            if (s := section_to_link(p))
         )
 
     def check_ok(self, args: Namespace) -> bool:
@@ -112,7 +119,7 @@ class File:
                 if args.verbose:
                     print(f'{self.file}: Checking section link "{link}" ..')
 
-                if link not in self.sections:
+                if link[1:] not in self.sections:
                     all_ok = False
                     print(
                         f'{self.file}: Link "{link}": does not match any section.',
@@ -127,6 +134,17 @@ class File:
                     print(
                         f'{self.file}: Path "{link}": does not exist.', file=sys.stderr
                     )
+
+        for link in self.refs:
+            if args.verbose:
+                print(f'{self.file}: Checking reference "{link}" ..')
+
+            if link.lower() not in self.ref_tags:
+                all_ok = False
+                print(
+                    f'{self.file}: Reference "{link}": does not match any tag.',
+                    file=sys.stderr,
+                )
 
         return all_ok
 
