@@ -1,0 +1,12 @@
+test.md: Checking URL "https://www.google.com" ..
+test.md: Checking URL "https://en.wikipedia.org/wiki/Vim_(text_editor)" ..
+test.md: Checking URL "https://google.com" ..
+test.md: Checking section link "#reference-links" ..
+test.md: Checking path link "./test.md" ..
+test.md: Checking URL "https://github.com/adam-p/markdown-here/wiki/markdown-cheatsheet#links" ..
+test.md: Checking URL "http://www.example.com" ..
+test.md: Checking URL "https://www.mozilla.org" ..
+test.md: Checking URL "http://slashdot.org" ..
+test.md: Checking URL "http://www.reddit.com" ..
+test.md: Checking reference "Arbitrary case-insensitive reference text" ..
+test.md: Checking reference "1" ..

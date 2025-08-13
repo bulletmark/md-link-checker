@@ -21,5 +21,8 @@ doc::
 format::
 	ruff check --select I --fix $(PYFILES) && ruff format $(PYFILES)
 
+test::
+	$(MAKE) -C test
+
 clean::
 	@rm -rf *.egg-info .venv/ build/ dist/ __pycache__/
