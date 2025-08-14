@@ -49,6 +49,20 @@ def section_to_link(section: str) -> str:
     return text
 
 
+def remove_code(text: str) -> str:
+    "Remove code blocks and indented code from Markdown text"
+    keep = True
+    lines = []
+    for ln in text.splitlines():
+        if re.match(r'\s*```', ln):
+            keep = not keep
+
+        if keep and not re.match(r'\s{4}', ln):
+            lines.append(ln)
+
+    return '\n'.join(lines)
+
+
 class File:
     "Class to represent each Markdown file"
 
@@ -60,7 +74,7 @@ class File:
     def __init__(self, file: Path) -> None:
         "Constructor to read file and extract links"
         self.file = file
-        text = file.read_text()
+        text = remove_code(file.read_text())
 
         # Fetch all inline links with titles ..
         self.links = [find_link(lk) for lk in re.findall(r']\(([^\[\]]+)\)', text)]
@@ -71,7 +85,9 @@ class File:
         # Build dict for any reference table
         ref_tags = {
             tag.strip().lower(): ref.strip()
-            for tag, ref in re.findall(r'^\s*\[([^\]]+)\]\s*:\s*(.+)\s*', text, re.MULTILINE)
+            for tag, ref in re.findall(
+                r'^\s*\[([^\]]+)\]\s*:\s*(.+)\s*', text, re.MULTILINE
+            )
         }
 
         ## Add reference links to the links list and record the tags
@@ -106,7 +122,7 @@ class File:
             if (urlres := self.urls.get(link)) is not None:
                 if args.verbose:
                     verb = 'Skipping' if args.no_urls else 'Checking'
-                    print(f'{self.file}: {verb} URL "{link}" ..')
+                    print(f'{self.file}: - {verb} URL "{link}" ..')
 
                 if urlres:
                     all_ok = False
@@ -117,7 +133,7 @@ class File:
                     )
             elif link[0] == '#':
                 if args.verbose:
-                    print(f'{self.file}: Checking section link "{link}" ..')
+                    print(f'{self.file}: - Checking section link "{link}" ..')
 
                 if link[1:] not in self.sections:
                     all_ok = False
@@ -127,7 +143,7 @@ class File:
                     )
             else:
                 if args.verbose:
-                    print(f'{self.file}: Checking path link "{link}" ..')
+                    print(f'{self.file}: - Checking path link "{link}" ..')
 
                 if not (basedir / link).exists():
                     all_ok = False
@@ -137,7 +153,7 @@ class File:
 
         for link in self.refs:
             if args.verbose:
-                print(f'{self.file}: Checking reference "{link}" ..')
+                print(f'{self.file}: - Checking reference "{link}" ..')
 
             if link.lower() not in self.ref_tags:
                 all_ok = False
