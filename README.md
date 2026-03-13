@@ -95,7 +95,7 @@ License as published by the Free Software Foundation, either version 3 of the
 License, or any later version. This program is distributed in the hope that it
 will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
-License at <https://opensource.org/license/gpl-3-0> for more details.
+License at <https://www.gnu.org/licenses/gpl-3.0.html> for more details.
 
 [md-link-checker]: https://github.com/bulletmark/md-link-checker
 [md-link-checker-py]: https://pypi.org/project/md-link-checker

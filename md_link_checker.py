@@ -182,7 +182,7 @@ class File:
                         response.raise_for_status()
             except ClientResponseError as e:
                 # Ignore "too many requests" errors
-                if e.status == 429:
+                if e.status in {0, 429}:
                     cls.urls_ignore[url] = 'Too many requests'
                 else:
                     cls.urls[url] = str(e)
