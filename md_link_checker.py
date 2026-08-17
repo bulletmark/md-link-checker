@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Utility to check url, section reference, and path links in Markdown files.
 """
@@ -12,6 +11,7 @@ import string
 import sys
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
+from typing import ClassVar
 
 from aiohttp import ClientResponseError, ClientSession, ClientTimeout
 
@@ -66,10 +66,10 @@ def remove_code(text: str) -> str:
 class File:
     "Class to represent each Markdown file"
 
-    urls: dict[str, str] = {}
-    urls_ignore: dict[str, str] = {}
-    queue: asyncio.Queue = asyncio.Queue()
-    timeout = ClientTimeout(total=10)
+    urls: ClassVar[dict[str, str]] = {}
+    urls_ignore: ClassVar[dict[str, str]] = {}
+    queue: ClassVar[asyncio.Queue] = asyncio.Queue()
+    timeout: ClassVar = ClientTimeout(total=10)
 
     def __init__(self, file: Path) -> None:
         "Constructor to read file and extract links"
@@ -108,11 +108,11 @@ class File:
         )
 
         # Fetch sections and create unique links from them ..
-        self.sections = set(
+        self.sections = {
             s
             for p in re.findall(r'^#+\s+(.+)\s*', text, re.MULTILINE)
             if (s := section_to_link(p))
-        )
+        }
 
     def check_ok(self, args: Namespace) -> bool:
         "Check and report all links in this file"

@@ -66,7 +66,7 @@ Type `md-link-checker -h` to view the usage summary:
 
 ```
 usage: md-link-checker [-h] [-u] [-p PARALLEL_URL_CHECKS] [-v] [-f] [-w]
-                          [files ...]
+                       [files ...]
 
 Utility to check url, section reference, and path links in Markdown files.
 
